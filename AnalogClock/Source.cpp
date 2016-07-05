@@ -189,12 +189,12 @@ int main()
 {
 	Clock analogClock;
 	sf::Font clockFont;
-	if (!clockFont.loadFromFile("C:/Workspace/AnalogClock/Resources/Ubuntu-R.ttf"))
+	if (!clockFont.loadFromFile("../Resources/Ubuntu-R.ttf"))
 	{
 		return EXIT_FAILURE;
 	}
 	sf::Texture clockImage;
-	if (!clockImage.loadFromFile("C:/Workspace/AnalogClock/Resources/background.jpg"))
+	if (!clockImage.loadFromFile("../Resources/background.jpg"))
 	{
 		return EXIT_FAILURE;
 	}
