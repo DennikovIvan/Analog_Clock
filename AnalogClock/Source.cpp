@@ -1,12 +1,11 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define _USE_MATH_DEFINES
 #include <SFML/Graphics.hpp>
 #include <ctime>
 #include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-
-const float PI = 3.1415927f;
 
 struct Arrows
 {
@@ -17,16 +16,6 @@ struct Arrows
 
 struct Clock
 {
-	int screenWidth;
-	int screenHeight;
-	int numbersSize;
-	float clockCircleSize;
-	float clockCircleThickness;
-	sf::Texture *clockBackground;
-	sf::Font *numbersFont;
-	sf::ContextSettings settings;
-	sf::RenderWindow *window;
-	sf::Vector2f *windowCenter;
 	sf::CircleShape *dot[60];
 	sf::Text *numbers[12];
 	sf::CircleShape *clockCountour;
@@ -34,64 +23,77 @@ struct Clock
 	Arrows *clockArrows;
 };
 
-void initClock(Clock *analogClock, sf::Texture *clockBackground, sf::Font *numbersFont);
-void initArrows(Clock *analogClock);
-void createDots(Clock *analogClock);
+struct Application
+{
+	sf::RenderWindow *window;
+	sf::ContextSettings settings;
+	sf::Font *clockFont;
+	int numbersSize;
+	float clockCircleSize;
+	float clockCircleThickness;
+	Clock *analogClock;
+};
+
+void initApplication(Application *application, sf::Font *clockFont);
+void initClock(Application *application);
+void initArrows(Application *application);
+void createDots(Application *application);
 void configureCircle(sf::CircleShape *circle, int pointCount, float outlineTickness, sf::Color color, int isFilled, float x, float y);
-void configureArrow(sf::RectangleShape *arrow, sf::Color color, sf::Vector2f *center);
-void updateArrows(Clock *analogClock);
-void createNumbers(Clock *analogClock);
-void configureNumbers(Clock *analogClock);
-void drawing(Clock *analogClock);
-void gameLoop(Clock *analogClock);
+void configureArrow(sf::RectangleShape *arrow, sf::Color color, sf::Vector2u windowSize);
+void updateArrows(Application *application);
+void createNumbers(Application *application);
+void configureNumbers(Application *application);
+void drawAFrame(Application *application);
+void gameLoop(Application *application);
 
-void initClock(Clock *analogClock, sf::Texture *clockBackground, sf::Font *numbersFont)
+void initApplication(Application *application, sf::Font *clockFont)
 {
-	analogClock->screenWidth = 800;
-	analogClock->screenHeight = 600;
-	analogClock->clockCircleSize = 250;
-	analogClock->clockCircleThickness = 5;
-	analogClock->numbersSize = 18;
-	analogClock->clockBackground = clockBackground;
-	analogClock->numbersFont = numbersFont;
-	analogClock->settings.antialiasingLevel = 8;
-	analogClock->window = new sf::RenderWindow(sf::VideoMode(analogClock->screenWidth, analogClock->screenHeight), "My Analog Clock", sf::Style::Close, analogClock->settings);
-	analogClock->windowCenter = new sf::Vector2f(analogClock->screenWidth / 2.0f, analogClock->screenHeight / 2.0f);
-	createDots(analogClock);
-	createNumbers(analogClock);
-	configureNumbers(analogClock);
-	analogClock->clockCountour = new sf::CircleShape(analogClock->clockCircleSize);
-	analogClock->clockCountour->setTexture(analogClock->clockBackground);
-	analogClock->clockCountour->setTextureRect(sf::IntRect(40, 0, 500, 500));
-	configureCircle(analogClock->clockCountour, 100, analogClock->clockCircleThickness, sf::Color::Black, 0, analogClock->windowCenter->x + analogClock->clockCircleThickness, analogClock->windowCenter->y + analogClock->clockCircleThickness);
-	analogClock->centerCircle = new sf::CircleShape(10);
-	configureCircle(analogClock->centerCircle, 100, 1, sf::Color::Red, 1, analogClock->windowCenter->x, analogClock->windowCenter->y);
-	analogClock->clockArrows = new Arrows;
-	initArrows(analogClock);
+	application->settings.antialiasingLevel = 8;
+	application->clockFont = clockFont;
+	application->numbersSize = 24;
+	application->clockCircleSize = 250;
+	application->clockCircleThickness = 5;
+	application->window = new sf::RenderWindow(sf::VideoMode(800, 600), "My Analog Clock", sf::Style::Close, application->settings);
+	application->analogClock = new Clock;
+	initClock(application);
 }
 
-void initArrows(Clock *analogClock)
+void initClock(Application *application)
 {
-	analogClock->clockArrows->hourHand = new sf::RectangleShape(sf::Vector2f(5, 150));
-	analogClock->clockArrows->minuteHand = new sf::RectangleShape(sf::Vector2f(3, 200));
-	analogClock->clockArrows->secondsHand = new sf::RectangleShape(sf::Vector2f(2, 220));
-	configureArrow(analogClock->clockArrows->hourHand, sf::Color::Black, analogClock->windowCenter);
-	configureArrow(analogClock->clockArrows->minuteHand, sf::Color::Black, analogClock->windowCenter);
-	configureArrow(analogClock->clockArrows->secondsHand, sf::Color::Red, analogClock->windowCenter);
+	createDots(application);
+	createNumbers(application);
+	configureNumbers(application);
+	application->analogClock->clockCountour = new sf::CircleShape(application->clockCircleSize);
+	application->analogClock->clockCountour->setFillColor(sf::Color::Yellow);
+	configureCircle(application->analogClock->clockCountour, 100, application->clockCircleThickness, sf::Color::Black, 0, application->window->getSize().x / 2.0f + application->clockCircleThickness, application->window->getSize().y / 2.0f + application->clockCircleThickness);
+	application->analogClock->centerCircle = new sf::CircleShape(10);
+	configureCircle(application->analogClock->centerCircle, 100, 1, sf::Color::Red, 1, float(application->window->getSize().x / 2.0f), float(application->window->getSize().y / 2.0f));
+	application->analogClock->clockArrows = new Arrows;
+	initArrows(application);
 }
 
-void createDots(Clock *analogClock)
+void initArrows(Application *application)
+{
+	application->analogClock->clockArrows->hourHand = new sf::RectangleShape(sf::Vector2f(5, 150));
+	application->analogClock->clockArrows->minuteHand = new sf::RectangleShape(sf::Vector2f(3, 200));
+	application->analogClock->clockArrows->secondsHand = new sf::RectangleShape(sf::Vector2f(2, 220));
+	configureArrow(application->analogClock->clockArrows->hourHand, sf::Color::Black, application->window->getSize());
+	configureArrow(application->analogClock->clockArrows->minuteHand, sf::Color::Black, application->window->getSize());
+	configureArrow(application->analogClock->clockArrows->secondsHand, sf::Color::Red, application->window->getSize());
+}
+
+void createDots(Application *application)
 {
 	float angle = 0.0;
 	float x;
 	float y;
 	for (int i = 0; i < 60; i++)
 	{
-		x = (analogClock->clockCircleSize - 10) * cos(angle);
-		y = (analogClock->clockCircleSize - 10) * sin(angle);
-		analogClock->dot[i] = (i % 5 == 0) ? new sf::CircleShape(3) : new sf::CircleShape(1);
-		configureCircle(analogClock->dot[i], 12, 1, sf::Color::Black, 1, x + analogClock->windowCenter->x, y + analogClock->windowCenter->y);
-		angle = angle + ((2 * PI) / 60);
+		x = (application->clockCircleSize - 10) * cos(angle);
+		y = (application->clockCircleSize - 10) * sin(angle);
+		application->analogClock->dot[i] = (i % 5 == 0) ? new sf::CircleShape(3) : new sf::CircleShape(1);
+		configureCircle(application->analogClock->dot[i], 12, 1, sf::Color::Black, 1, x + application->window->getSize().x / 2.0f, y + application->window->getSize().y / 2.0f);
+		angle = angle + float((2 * M_PI) / 60);
 	}
 }
 
@@ -108,97 +110,92 @@ void configureCircle(sf::CircleShape *circle, int pointCount, float outlineTickn
 	circle->setPosition(x, y);
 }
 
-void configureArrow(sf::RectangleShape *arrow, sf::Color color, sf::Vector2f *center)
+void configureArrow(sf::RectangleShape *arrow, sf::Color color, sf::Vector2u windowSize)
 {
 	arrow->setFillColor(color);
 	arrow->setOrigin(arrow->getGlobalBounds().width / 2, arrow->getGlobalBounds().height);
-	arrow->setPosition(*center);
+	arrow->setPosition(windowSize.x / 2.0f, windowSize.y / 2.0f);
 }
 
-void updateArrows(Clock *analogClock)
+void updateArrows(Application *application)
 {
 	std::time_t currentTime = std::time(NULL);
 	struct tm * ptm = localtime(&currentTime);
-	analogClock->clockArrows->hourHand->setRotation(float(ptm->tm_hour * 30 + (ptm->tm_min / 2)));
-	analogClock->clockArrows->minuteHand->setRotation(float(ptm->tm_min * 6 + (ptm->tm_sec / 12)));
-	analogClock->clockArrows->secondsHand->setRotation(float(ptm->tm_sec * 6));
+	application->analogClock->clockArrows->hourHand->setRotation(float(ptm->tm_hour * 30 + (ptm->tm_min / 2)));
+	application->analogClock->clockArrows->minuteHand->setRotation(float(ptm->tm_min * 6 + (ptm->tm_sec / 12)));
+	application->analogClock->clockArrows->secondsHand->setRotation(float(ptm->tm_sec * 6));
 }
 
-void createNumbers(Clock *analogClock)
+void createNumbers(Application *application)
 {
 	for (int i = 0; i < 12; i++)
 	{
-		analogClock->numbers[i] = new sf::Text;
+		application->analogClock->numbers[i] = new sf::Text;
 	}
 }
 
-void configureNumbers(Clock *analogClock)
+void configureNumbers(Application *application)
 {
 	float x;
 	float y;
-	float angel = 0.0;
+	float angle = 0.0;
 	for (int i = 0; i < 12; i++)
 	{
-		x = (analogClock->clockCircleSize - 30) * cos(angel);
-		y = (analogClock->clockCircleSize - 30) * sin(angel);
-		analogClock->numbers[i]->setFont(*analogClock->numbersFont);
-		(i < 10) ? analogClock->numbers[i]->setString(std::to_string(i + 3)) : analogClock->numbers[i]->setString(std::to_string(i - 9));
-		analogClock->numbers[i]->setCharacterSize(analogClock->numbersSize);
-		analogClock->numbers[i]->setColor(sf::Color::Red);
-		analogClock->numbers[i]->setOrigin(analogClock->numbers[i]->getGlobalBounds().width / 2, analogClock->numbers[i]->getGlobalBounds().height / 2 + float(analogClock->numbersSize / 4.0));
-		analogClock->numbers[i]->setPosition(x + analogClock->windowCenter->x, y + analogClock->windowCenter->y);
-		angel += ((2 * PI) / 12);
+		x = (application->clockCircleSize - 30) * cos(angle);
+		y = (application->clockCircleSize - 30) * sin(angle);
+		application->analogClock->numbers[i]->setFont(*application->clockFont);
+		(i < 10) ? application->analogClock->numbers[i]->setString(std::to_string(i + 3)) : application->analogClock->numbers[i]->setString(std::to_string(i - 9));
+		application->analogClock->numbers[i]->setCharacterSize(application->numbersSize);
+		application->analogClock->numbers[i]->setColor(sf::Color::Blue);
+		application->analogClock->numbers[i]->setOrigin(application->analogClock->numbers[i]->getGlobalBounds().width / 2, application->analogClock->numbers[i]->getGlobalBounds().height / 2 + float(application->numbersSize / 4.0));
+		application->analogClock->numbers[i]->setPosition(x + application->window->getSize().x / 2.0f, y + application->window->getSize().y / 2.0f);
+		angle += float((2 * M_PI) / 12);
 	}
 }
 
-void drawing(Clock *analogClock)
+void drawAFrame(Application *application)
 {
-	analogClock->window->clear(sf::Color::White);
-	analogClock->window->draw(*analogClock->clockCountour);
+	application->window->clear(sf::Color::White);
+	application->window->draw(*application->analogClock->clockCountour);
+	for (int i = 0; i < 12; i++)
+	{
+		application->window->draw(*application->analogClock->numbers[i]);
+	}
 	for (int i = 0; i < 60; i++)
 	{
-		if (i < 12)
-		{
-			analogClock->window->draw(*analogClock->numbers[i]);
-		}
-		analogClock->window->draw(*analogClock->dot[i]);
+		application->window->draw(*application->analogClock->dot[i]);
 	}
-	analogClock->window->draw(*analogClock->clockArrows->hourHand);
-	analogClock->window->draw(*analogClock->clockArrows->minuteHand);
-	analogClock->window->draw(*analogClock->clockArrows->secondsHand);
-	analogClock->window->draw(*analogClock->centerCircle);
-	analogClock->window->display();
+	application->window->draw(*application->analogClock->clockArrows->hourHand);
+	application->window->draw(*application->analogClock->clockArrows->minuteHand);
+	application->window->draw(*application->analogClock->clockArrows->secondsHand);
+	application->window->draw(*application->analogClock->centerCircle);
+	application->window->display();
 }
 
-void gameLoop(Clock *analogClock)
+void gameLoop(Application *application)
 {
-	while (analogClock->window->isOpen())
+	while (application->window->isOpen())
 	{
 		sf::Event event;
-		while (analogClock->window->pollEvent(event))
+		while (application->window->pollEvent(event))
 		{
 			if (event.type == sf::Event::Closed)
-				analogClock->window->close();
+				application->window->close();
 		}
-		updateArrows(analogClock);
-		drawing(analogClock);
+		updateArrows(application);
+		drawAFrame(application);
 	}
 }
 
 int main()
 {
-	Clock analogClock;
+	Application application;
 	sf::Font clockFont;
 	if (!clockFont.loadFromFile("../Resources/Ubuntu-R.ttf"))
 	{
 		return EXIT_FAILURE;
 	}
-	sf::Texture clockImage;
-	if (!clockImage.loadFromFile("../Resources/background.jpg"))
-	{
-		return EXIT_FAILURE;
-	}
-	initClock(&analogClock, &clockImage, &clockFont);
-	gameLoop(&analogClock);
+	initApplication(&application, &clockFont);
+	gameLoop(&application);
 	return EXIT_SUCCESS;
 }
